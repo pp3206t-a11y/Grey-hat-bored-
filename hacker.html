@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GREY_SYSTEM_v5_FINAL</title>
+    <style>
+        :root { --neon: #00ff41; --bg: #000; --dim: #003300; --warn: #ff0000; }
+        * { box-sizing: border-box; cursor: crosshair; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; padding: 5px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        
+        .dashboard { display: grid; grid-template-columns: 350px 1fr 350px; grid-template-rows: 60px 1fr 220px; gap: 10px; flex-grow: 1; height: 100%; }
+        .box { border: 1px solid var(--neon); background: rgba(0, 10, 0, 0.95); display: flex; flex-direction: column; position: relative; }
+        .box-h { background: var(--neon); color: #000; font-size: 11px; font-weight: bold; padding: 4px 10px; display: flex; justify-content: space-between; }
+        
+        /* Terminal yang BISA Master Scroll sendiri */
+        .terminal { flex-grow: 1; overflow-y: auto; padding: 10px; font-size: 11px; line-height: 1.5; scrollbar-width: thin; scrollbar-color: var(--neon) var(--bg); }
+        .terminal::-webkit-scrollbar { width: 6px; }
+        .terminal::-webkit-scrollbar-thumb { background: var(--neon); border-radius: 3px; }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 10px; }
+        .btn { border: 1px solid var(--neon); background: none; color: var(--neon); padding: 8px; font-size: 10px; text-align: left; transition: 0.2s; font-weight: bold; }
+        .btn:hover { background: var(--neon); color: #000; box-shadow: 0 0 20px var(--neon); }
+
+        /* Scanning effect */
+        .scanline { position: fixed; top: 0; width: 100%; height: 100%; background: linear-gradient(0deg, rgba(0,255,65,0.03) 0%, rgba(0,0,0,0) 10%); animation: scan 8s linear infinite; pointer-events: none; z-index: 1000; }
+        @keyframes scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
+
+        .stat-row { padding: 8px 15px; font-size: 12px; }
+        .progress { border: 1px solid var(--neon); height: 12px; margin-top: 5px; position: relative; }
+        .fill { background: var(--neon); height: 100%; width: 0%; transition: width 0.3s; }
+        
+        #visual-center { font-size: 10px; color: #008800; white-space: pre-wrap; word-break: break-all; opacity: 0.7; }
+    </style>
+</head>
+<body onclick="launchFullScreen()">
+    <div class="scanline"></div>
+
+    <div class="dashboard">
+        <!-- HEADER -->
+        <div class="box" style="grid-column: span 3; flex-direction: row; align-items: center; padding: 0 20px; border-width: 2px;">
+            <div style="font-size: 26px; font-weight: bold; letter-spacing: 12px;">GREY_CORE_OVERDRIVE_V5</div>
+            <div style="margin-left: auto; text-align: right;">
+                <span style="color: var(--warn); font-weight: bold;">[ ENCRYPTED_CHANNEL_ACTIVE ]</span><br>
+                Uptime: <span id="session-time">00:00:00</span>
+            </div>
+        </div>
+
+        <!-- LEFT: LOGS (Master can scroll) -->
+        <div class="box">
+            <div class="box-h"><span>INTRUSION_LOGS</span><span>MANUAL_SCROLL_OK</span></div>
+            <div id="left-log" class="terminal"></div>
+        </div>
+
+        <!-- CENTER: HEX DUMP & STATUS -->
+        <div class="box">
+            <div class="box-h"><span>SYSTEM_MEMORY_DUMP</span><span>REAL_TIME_STREAM</span></div>
+            <div id="visual-center" class="terminal"></div>
+            <div style="padding: 15px; border-top: 2px solid var(--neon); background: var(--dim);">
+                <div id="cmd-line" style="font-size: 18px; font-weight: bold; color: #fff;">>_ SYSTEM_READY</div>
+            </div>
+        </div>
+
+        <!-- RIGHT: COMMANDS & RESOURCES -->
+        <div class="box">
+            <div class="box-h"><span>CONTROL_INTERFACE</span><span>MASTER_LEVEL</span></div>
+            <div class="btn-grid">
+                <button class="btn">SQL_INJECTION</button> <button class="btn">BRUTE_FORCE</button>
+                <button class="btn">REMOTE_SHELL</button> <button class="btn">DNS_POISON</button>
+                <button class="btn">PROXY_BOUNCE</button> <button class="btn">MITM_ATTACK</button>
+                <button class="btn">XSS_PAYLOAD</button> <button class="btn">DDoS_ATTACK</button>
+                <button class="btn" style="color:orange; border-color:orange;">RAT_DEPLOY</button>
+                <button class="btn" style="color:red; border-color:red;">PURGE_ALL</button>
+            </div>
+            <div class="box-h"><span>HARDWARE_METRICS</span></div>
+            <div class="stat-row">CPU_CORE <div class="progress"><div id="p1" class="fill"></div></div></div>
+            <div class="stat-row">RAM_ALLOC <div class="progress"><div id="p2" class="fill"></div></div></div>
+            <div class="stat-row">SWAP_FILE <div class="progress"><div id="p3" class="fill"></div></div></div>
+        </div>
+
+        <!-- BOTTOM: MULTI-STREAM LOGS -->
+        <div class="box" style="grid-column: span 3;">
+            <div class="box-h"><span>KERNEL_STREAMS // MASTER_PRACTICAL_MECHANICS</span></div>
+            <div id="bottom-log" class="terminal" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;"></div>
+        </div>
+    </div>
+
+<script>
+    function launchFullScreen() {
+        let el = document.documentElement;
+        if (el.requestFullscreen) el.requestFullscreen();
+    }
+
+    const leftLog = document.getElementById('left-log');
+    const bottomLog = document.getElementById('bottom-log');
+    const visualCenter = document.getElementById('visual-center');
+    const cmdLine = document.getElementById('cmd-line');
+
+    // Pakai APPEND supaya log baru ada di bawah, dan scroll Master gak keganggu
+    function addLog(el, text, color="") {
+        const d = document.createElement('div');
+        if(color) d.style.color = color;
+        d.innerHTML = `[${new Date().toLocaleTimeString()}] ${text}`;
+        el.appendChild(d);
+        // Otomatis scroll ke bawah cuma kalau Master gak lagi scroll ke atas
+        if (el.scrollHeight - el.scrollTop <= el.clientHeight + 50) {
+            el.scrollTop = el.scrollHeight;
+        }
+        if(el.childNodes.length > 100) el.removeChild(el.firstChild);
+    }
+
+    // Engine
+    setInterval(() => {
+        const ips = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+        addLog(leftLog, `INCOMING_CONNECTION: ${ips} -> GRANTED`, "#0ff");
+        addLog(bottomLog, `KERN_MSG: ADDR_0x${Math.random().toString(16).slice(2,10)} SUCCESS`);
+        
+        document.getElementById('p1').style.width = Math.random() * 100 + "%";
+        document.getElementById('p2').style.width = Math.random() * 100 + "%";
+        document.getElementById('p3').style.width = Math.random() * 100 + "%";
+
+        // Hex Visualizer
+        let hex = "";
+        for(let i=0; i<20; i++) hex += Math.random().toString(16).toUpperCase().slice(2,14) + " ";
+        visualCenter.innerText += hex + "\n";
+        visualCenter.scrollTop = visualCenter.scrollHeight;
+        if(visualCenter.innerText.length > 2000) visualCenter.innerText = visualCenter.innerText.slice(500);
+
+        const msgs = ["> BYPASSING...", "> ENCRYPTING...", "> ANALYZING...", "> ROOT_FOUND"];
+        cmdLine.innerText = msgs[Math.floor(Math.random()*msgs.length)];
+    }, 300);
+
+    let sec = 0;
+    setInterval(() => {
+        sec++;
+        let h = Math.floor(sec / 3600);
+        let m = Math.floor((sec % 3600) / 60);
+        let s = sec % 60;
+        document.getElementById('session-time').innerText = 
+            `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+    }, 1000);
+</script>
+</body>
+</html>
